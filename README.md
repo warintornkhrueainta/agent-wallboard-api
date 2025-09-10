@@ -22,11 +22,10 @@
 git http://localhost:3001
 
 <img width="1003" height="762" alt="Screenshot 2568-09-10 at 14 06 00" src="https://github.com/user-attachments/assets/798b1c05-db43-465c-86b1-34522e4df4e9" />
-## Testing & Integration
 
-git http://localhost:3001
 
-<img width="1003" height="762" alt="Screenshot 2568-09-10 at 14 06 00" src="https://github.com/user-attachments/assets/798b1c05-db43-465c-86b1-34522e4df4e9" />
+git http://localhost:3001//api/health
+<img width="953" height="611" alt="image" src="https://github.com/user-attachments/assets/2ea502e8-499e-4088-9a45-304defcdb4cd" />
 
 ---
 ## 🚀 Quick Start
