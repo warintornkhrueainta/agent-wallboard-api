@@ -14,7 +14,7 @@
 - 📊 Consistent API response format (sendSuccess/sendError)
 
 ---
-<img width="1826" height="1472" alt="image" src="https://github.com/user-attachments/assets/489d91a3-2aaf-4558-96c6-a7c1e169e004" />
+
 ## 🚀 Quick Start
 
 ```bash
