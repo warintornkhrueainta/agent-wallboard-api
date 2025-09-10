@@ -14,6 +14,7 @@
 - 📊 Consistent API response format (sendSuccess/sendError)
 
 ---
+
 ---
 
 ## Testing & Integration
@@ -21,6 +22,13 @@
 git http://localhost:3001
 
 <img width="1003" height="762" alt="Screenshot 2568-09-10 at 14 06 00" src="https://github.com/user-attachments/assets/798b1c05-db43-465c-86b1-34522e4df4e9" />
+## Testing & Integration
+
+git http://localhost:3001
+
+<img width="1003" height="762" alt="Screenshot 2568-09-10 at 14 06 00" src="https://github.com/user-attachments/assets/798b1c05-db43-465c-86b1-34522e4df4e9" />
+
+---
 ## 🚀 Quick Start
 
 ```bash
@@ -38,10 +46,4 @@ npm run dev
 # 4. Test API
 curl http://localhost:3001/api/health
 
----
 
-## Testing & Integration
-
-git http://localhost:3001
-
-<img width="1003" height="762" alt="Screenshot 2568-09-10 at 14 06 00" src="https://github.com/user-attachments/assets/798b1c05-db43-465c-86b1-34522e4df4e9" />
