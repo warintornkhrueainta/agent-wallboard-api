@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket Test</title>
+</head>
+<body>
+  <h1>WebSocket Test Page</h1>
+  <p>Open console to see messages</p>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.emit('join', 'A123'); // ตัวอย่าง: เข้าร่วมห้องของ Agent A123
+
+    socket.on('newMessage', (data) => {
+      console.log('📨 New Message:', data);
+    });
+
+    socket.on('agentStatusChanged', (data) => {
+      console.log('⚙️ Agent Status Changed:', data);
+    });
+  </script>
+</body>
+</html>
