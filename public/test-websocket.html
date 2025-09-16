@@ -1,26 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>WebSocket Test</title>
+    <title>WebSocket Test</title>
 </head>
 <body>
-  <h1>WebSocket Test Page</h1>
-  <p>Open console to see messages</p>
+    <h1>WebSocket Test </h1>
+    <p>Check the browser's console for real-time updates.</p>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+    <!-- โหลด client library ของ Socket.IO -->
+    <script src="http://localhost:3001/socket.io/socket.io.js"></script>
+    <script>
+        // เชื่อมต่อ WebSocket server บนพอร์ต 3001
+        const socket = io('http://localhost:3001');
 
-    socket.emit('join', 'A123'); // ตัวอย่าง: เข้าร่วมห้องของ Agent A123
+        // ตรวจสอบการเชื่อมต่อ
+        socket.on('connect', () => {
+            console.log('✅ Connected to WebSocket server');
+        });
 
-    socket.on('newMessage', (data) => {
-      console.log('📨 New Message:', data);
-    });
+        // ฟัง event 'agentStatusChanged'
+        socket.on('agentStatusChanged', (data) => {
+            console.log('🔔 Status changed:', data);
+        });
 
-    socket.on('agentStatusChanged', (data) => {
-      console.log('⚙️ Agent Status Changed:', data);
-    });
-  </script>
+         socket.emit('join', 'A123'); // ตัวอย่าง: เข้าร่วมห้องของ Agent A123
+
+        // ฟัง event 'newMessage'
+        socket.on('newMessage', (data) => {
+            console.log('✉️ New message:', data);
+        });
+
+      
+        // ฟัง event การตัดการเชื่อมต่อ (disconnect)
+        socket.on('disconnect', () => {
+            console.log('🔴 Disconnected from WebSocket server');
+        });
+    </script>
 </body>
 </html>

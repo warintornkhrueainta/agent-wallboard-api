@@ -2,36 +2,37 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
- require('dotenv').config();
+require('dotenv').config();
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
+const path = require('path');
 
+// Winston logger
+const { createLogger, format, transports } = require('winston');
+const logger = createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    format.colorize(),
+    format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
+  ),
+  transports: [new transports.Console()]
+});
 
 // Import routes และ middleware
 const routes = require('./routes');
 const { globalErrorHandler, notFoundHandler, performanceMonitor } = require('./middleware/errorHandler');
 
-
-
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 // MongoDB connection
-const mongoose = require('mongoose');
-
-mongoose.connect(
-  'mongodb+srv://warintorn0987716154_db_user:wa098771%21@cluster.xem8pf9.mongodb.net/agentdb?retryWrites=true&w=majority&appName=Cluster'
-)
-.then(() => console.log('✅ MongoDB connected'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
-
-
+mongoose.connect('mongodb+srv://warintorn0987716154_db_user:wa098771@cluster.xem8pf9.mongodb.net/ชื่อDatabase?retryWrites=true&w=majority')
+  .then(() => logger.info('✅ MongoDB connected'))
+  .catch(err => logger.error('❌ MongoDB connection error:', err));
 
 // Agent Schema & Model
 const agentSchema = new mongoose.Schema({
@@ -45,14 +46,8 @@ const agentSchema = new mongoose.Schema({
 });
 const Agent = mongoose.model('Agent', agentSchema);
 
-
-
-
 // Security middleware
 app.use(helmet());
-
-
-
 
 // CORS configuration
 app.use(cors({
@@ -60,31 +55,18 @@ app.use(cors({
   credentials: true
 }));
 
-
-
-
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-// Serve static files from 'public' folder
 app.use(express.static('public'));
-
-
-
 
 // Request logging (เฉพาะ development)
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-
-
-
 // Performance monitoring
 app.use(performanceMonitor);
-
-
-
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -103,12 +85,10 @@ app.get('/', (req, res) => {
   });
 });
 
-
-
-app.get('/', (req, res) => {
-  res.send('Agent Wallboard API is running!');
+// Wallboard page
+app.get('/test-websocket.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'test-websocket.html'));
 });
-
 
 // CRUD APIs
 app.get('/api/agents', async (req, res) => {
@@ -120,9 +100,6 @@ app.get('/api/agents', async (req, res) => {
   }
 });
 
-
-
-
 app.get('/api/agents/:id', async (req, res) => {
   try {
     const agent = await Agent.findById(req.params.id);
@@ -132,9 +109,6 @@ app.get('/api/agents/:id', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
-
-
 
 app.post('/api/agents', async (req, res) => {
   try {
@@ -146,9 +120,6 @@ app.post('/api/agents', async (req, res) => {
   }
 });
 
-
-
-
 app.put('/api/agents/:id', async (req, res) => {
   try {
     const agent = await Agent.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -158,9 +129,6 @@ app.put('/api/agents/:id', async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 });
-
-
-
 
 app.delete('/api/agents/:id', async (req, res) => {
   try {
@@ -172,9 +140,6 @@ app.delete('/api/agents/:id', async (req, res) => {
   }
 });
 
-
-
-
 // PATCH update agent status with real-time WebSocket
 app.patch('/api/agents/:id/status', async (req, res) => {
   try {
@@ -185,8 +150,6 @@ app.patch('/api/agents/:id/status', async (req, res) => {
     );
     if (!agent) return res.status(404).json({ success: false, message: 'Agent not found' });
 
-
-
     // ส่ง real-time update
     io.emit('agentStatusChanged', {
       agentId: agent._id,
@@ -195,36 +158,13 @@ app.patch('/api/agents/:id/status', async (req, res) => {
       timestamp: agent.lastStatusChange
     });
 
-
-
-
     res.json({ success: true, data: agent });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 });
 
-
-
-
-// Health check
-app.get('/api/health', (req, res) => res.send({ success: true, message: 'Server is running' }));
-
-
-
-
-// API routes
-app.use('/api', routes);
-
-
-
-
-// Error handlers (ต้องอยู่ท้ายสุด)
-app.use('*', notFoundHandler);
-app.use(globalErrorHandler);
-
-
-// models/Message.js
+// Message Model
 const messageSchema = new mongoose.Schema({
   from: { type: String, required: true },    // Supervisor name
   to: { type: String, required: true },      // Agent code หรือ 'ALL'
@@ -232,35 +172,72 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   read: { type: Boolean, default: false }
 });
-
-
-// Static method: ดึงข้อความทั้งหมดของ Agent
 messageSchema.statics.getAgentMessages = async function(agentCode) {
-  return this.find({
-    $or: [{ to: agentCode }, { to: 'ALL' }]
-  }).sort({ timestamp: -1 });
+  return this.find({ $or: [{ to: agentCode }, { to: 'ALL' }] }).sort({ timestamp: -1 });
 };
-
-
-// Static method: mark message เป็น read
 messageSchema.statics.markAsRead = async function(messageId) {
   return this.findByIdAndUpdate(messageId, { read: true }, { new: true });
 };
-
-
-// Static method: conversation history ระหว่าง Supervisor กับ Agent
 messageSchema.statics.getConversation = async function(agentCode, supervisor) {
   return this.find({
     $or: [
       { from: supervisor, to: agentCode },
       { from: agentCode, to: supervisor }
     ]
-  }).sort({ timestamp: 1 }); // เรียงจากเก่าสุด → ล่าสุด
+  }).sort({ timestamp: 1 });
 };
+const Message = mongoose.model('Message', messageSchema);
+
+app.post('/api/messages', async (req, res) => {
+  try {
+    const { from, to, message } = req.body;
+    const newMessage = new Message({ from, to, message });
+    await newMessage.save();
+
+    io.emit('newMessage', {
+      from,
+      to,
+      message,
+      timestamp: newMessage.timestamp
+    });
+
+    res.status(201).json({ success: true, data: newMessage });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/messages/:agentCode', async (req, res) => {
+  try {
+    const { agentCode } = req.params;
+    const messages = await Message.find({
+      $or: [{ to: agentCode }, { to: 'ALL' }]
+    }).sort({ timestamp: -1 });
+
+    res.json({ success: true, data: messages });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 
-module.exports = mongoose.model('Message', messageSchema);
+// API routes
+app.use('/api', routes);
 
+// Health check
+app.get('/api/health', (req, res) => res.send({ success: true, message: 'Server is running' }));
+
+// API routes
+app.use('/api', routes);
+
+// ✅ ปิด log 404 DevTools
+app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
+  res.status(204).end();
+});
+
+// Error handlers
+app.use('*', notFoundHandler);
+app.use(globalErrorHandler);
 
 // Create HTTP server and WebSocket
 const server = http.createServer(app);
@@ -271,37 +248,55 @@ const io = socketIo(server, {
 
 // WebSocket connection
 io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
- 
+  logger.info(`🔌 User connected: ${socket.id}`);
+
+  // เข้าร่วมห้องของ Agent ตาม agentCode
+  socket.on('join', (agentCode) => {
+    socket.join(agentCode);
+    logger.info(`🟢 User joined room: ${agentCode}`);
+  });
+
+  // รับข้อความส่วนตัวหรือ broadcast
+  socket.on('sendMessage', ({ from, to, message }) => {
+    const msg = {
+      from,
+      to,
+      message,
+      timestamp: new Date()
+    };
+
+    // ส่ง event 'newMessage' ให้เฉพาะห้องที่เกี่ยวข้อง
+    if (to === 'ALL') {
+      io.emit('newMessage', msg); // broadcast ทุกคน
+    } else {
+      io.to(to).emit('newMessage', msg); // ส่งเฉพาะ agent
+    }
+
+    logger.info(`✉️ Message from ${from} to ${to}: ${message}`);
+  });
+
+  // เมื่อ user ตัดการเชื่อมต่อ
   socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
+    logger.info(`🔴 User disconnected: ${socket.id}`);
   });
 });
-
-
 
 
 // Start server
 server.listen(PORT, () => {
-  console.log('🚀 Agent Wallboard API Enhanced with WebSocket');
-  console.log(`📡 Server running on http://localhost:${PORT}`);
-  console.log(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
-  console.log(`💚 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info('🚀 Agent Wallboard API Enhanced with WebSocket');
+  logger.info(`📡 Server running on http://localhost:${PORT}`);
+  logger.info(`📚 API Documentation: http://localhost:${PORT}/api/docs`);
+  logger.info(`💚 Health Check: http://localhost:${PORT}/api/health`);
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-
-
-
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  logger.warn('🛑 SIGTERM received, shutting down gracefully');
   server.close(() => {
-    console.log('✅ Process terminated');
+    logger.info('✅ Process terminated');
   });
 });
-
-
-
 
 module.exports = app;
