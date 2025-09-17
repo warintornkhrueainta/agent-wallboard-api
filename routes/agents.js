@@ -1,6 +1,6 @@
-// routes/agents.js - เชื่อม routes กับ controllers
+// routes/agents.js - Updated routes สำหรับ MongoDB
 const express = require('express');
-const agentController = require('../controllers/agentController');
+const agentController = require('../controllers/agentControllerMongo'); // เปลี่ยนเป็น MongoDB version
 const { validateAgent, validateStatusUpdate } = require('../middleware/validation');
 
 const router = express.Router();
@@ -13,6 +13,9 @@ router.get('/status/summary', agentController.getStatusSummary);
 
 // GET /api/agents/:id - Get specific agent
 router.get('/:id', agentController.getAgentById);
+
+// GET /api/agents/:id/history - Get agent status history
+router.get('/:id/history', agentController.getAgentStatusHistory);
 
 // POST /api/agents - Create new agent (with validation)
 router.post('/', validateAgent, agentController.createAgent);
